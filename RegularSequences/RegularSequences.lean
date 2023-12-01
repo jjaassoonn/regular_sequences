@@ -1,7 +1,10 @@
 import Mathlib.LinearAlgebra.Quotient
+import Mathlib.LinearAlgebra.Isomorphisms
 import Mathlib.RingTheory.Ideal.Operations
+import Mathlib.RingTheory.Noetherian
 import Mathlib.RingTheory.MvPolynomial.Basic
 import Mathlib.Logic.UnivLE
+import Mathlib.Data.Fin.VecNotation
 
 universe uR uM
 
@@ -82,7 +85,7 @@ instance [Nontrivial M] : EmptyCollection (RegularSequence R M) where
           Submodule.mem_bot] at r
         exact h (sub_eq_zero.mp r) }
 
--- (Un)Interestingly, if `R` is zero ring, then `X₀, X₁` is not a regular sequence.
+-- Interestingly or uninterestingly, if `R` is zero ring, then `X₀, X₁` is not a regular sequence.
 open MvPolynomial in
 /--
 Consider `S = R[X_0, X_1]`, then `[X_0, X_1]` is a regular sequence.
@@ -90,9 +93,11 @@ Consider `S = R[X_0, X_1]`, then `[X_0, X_1]` is a regular sequence.
 * regularity: `X_0 ∈ S⁰_{R[X_0, X_1] ⧸ ∅}` and `X_1 ∈ S⁰_{R[X_0, X_1] ⧸ ⟨X_0⟩}`
 * nontrivial `R[X_0, X_1] ⧸ ⟨X_0, X_1⟩ ≠ 0`
 -/
-example [Nontrivial R] : RegularSequence (MvPolynomial (Fin 2) R) (MvPolynomial (Fin 2) R) where
+example (k : Type*) [Field k] :
+    RegularSequence (MvPolynomial (Fin 2) k) (MvPolynomial (Fin 2) k) where
   toList := [X 0, X 1]
   regular i h := by
+    classical
     rw [List.length_cons, List.length_singleton, show Nat.succ 1 = 2 from rfl] at h
     interval_cases i
     · rintro x (hx : X 0 • _ = 0)
@@ -110,14 +115,15 @@ example [Nontrivial R] : RegularSequence (MvPolynomial (Fin 2) R) (MvPolynomial 
       rw [Submodule.Quotient.mk_eq_zero] at hx ⊢
       simp only [smul_eq_mul, List.take_cons_succ, List.take_zero, List.mem_singleton,
         Set.setOf_eq_eq_singleton, Ideal.mul_top] at hx ⊢
-      suffices H : X 1 ∉ Ideal.span {(X 0 : MvPolynomial (Fin 2) R)}
-      · have prime_X0 := (Ideal.span_singleton_prime (α := MvPolynomial (Fin 2) R) (p := X 0) ?_).mpr ?_
+      suffices H : X 1 ∉ Ideal.span {(X 0 : MvPolynomial (Fin 2) k)}
+      · have prime_X0 := (Ideal.span_singleton_prime (α := MvPolynomial (Fin 2) k) (p := X 0) ?_).mpr sorry
         exact ((prime_X0.mul_mem_iff_mem_or_mem (x := X 1) (y := p)).mp hx).resolve_left H
-        · sorry -- X₀ ≠ 0
-        · sorry -- X₀ is prime
+        · exact (by simpa only [coeff_X', ite_true, coeff_zero, one_ne_zero] using
+            (ext_iff _ _).mp · (fun₀ | 0 => 1))
 
       intro H
       rw [Ideal.mem_span_singleton] at H
+      -- H : X₀ ∣ X₁, there is a contradiction here somewhere
       obtain ⟨q, hq⟩ := H
       sorry
   nontrivial := by
@@ -125,11 +131,8 @@ example [Nontrivial R] : RegularSequence (MvPolynomial (Fin 2) R) (MvPolynomial 
     simp only [List.length_cons, List.length_singleton, List.take_cons_succ, List.take_nil,
       Bool.not_eq_true, List.mem_cons, List.mem_singleton, smul_eq_mul, Ideal.mul_top,
       List.find?_nil, List.not_mem_nil, or_false]
-    suffices e : (MvPolynomial (Fin 2) R ⧸ Ideal.span {(X 0 : MvPolynomial (Fin 2) R), X 1}) ≃ₗ[R] R
-    · refine ⟨e.symm 0, e.symm 1, fun h ↦ ?_⟩
-      have := e.symm.injective h
-      exact zero_ne_one this
-
+    suffices e : (MvPolynomial (Fin 2) k ⧸ Ideal.span {(X 0 : MvPolynomial (Fin 2) k), X 1}) ≃ₗ[k] k
+    · exact ⟨e.symm 0, e.symm 1, fun h ↦ zero_ne_one <| e.symm.injective h⟩
     sorry
 
 end RegularSequence
